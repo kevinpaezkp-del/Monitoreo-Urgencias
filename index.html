@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#10347b" />
   <title>Monitor de Flujo de Urgencias · Demo</title>
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=final3" />
 </head>
 <body>
   <header class="topbar">
@@ -158,6 +158,11 @@
               </label>
             </div>
 
+            <div class="active-filter-notice" id="activeFilterNotice" hidden>
+              <span>Mostrando: <b id="activeFilterLabel">Todos</b></span>
+              <button id="clearFilterBtn" type="button">Ver todos</button>
+            </div>
+
             <div class="filters">
               <button class="filter active" data-filter="all">Todos</button>
               <button class="filter" data-filter="assessment">Valoración</button>
@@ -296,6 +301,6 @@
     </div>
   </div>
 
-  <script src="app.js"></script>
+  <script src="app.js?v=final3"></script>
 </body>
 </html>
