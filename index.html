@@ -28,16 +28,16 @@
       <div>
         <span class="eyebrow">PANORAMA GENERAL</span>
         <h2>¿Qué está pasando en Urgencias <em>ahora</em>?</h2>
-        <p>La demo simula un servicio con alrededor de 250 pacientes activos y prioriza dónde existe una oportunidad concreta de acción.</p>
+        <p>La demo simula un servicio con alrededor de 250 pacientes activos y hace visible dónde están, qué los está deteniendo y quién puede avanzar.</p>
       </div>
       <div class="last-update">
         <span>Última actualización</span>
         <strong id="lastUpdate">--:--:--</strong>
-        <small>eventos simulados cada 10 s</small>
+        <small>demo acelerada · eventos cada 10 s</small>
       </div>
     </section>
 
-    <section class="headline-kpis">
+    <section class="headline-kpis compact-kpis">
       <article>
         <span>Pacientes activos</span>
         <strong id="kpiTotal">250</strong>
@@ -46,12 +46,12 @@
       <article class="accent-blue">
         <span>Pueden avanzar ahora</span>
         <strong id="kpiCanAdvance">0</strong>
-        <small>requieren una acción para mover el flujo</small>
+        <small>hay una acción concreta disponible</small>
       </article>
       <article class="accent-red">
-        <span>Tienen una barrera activa</span>
+        <span>Con barrera activa</span>
         <strong id="kpiBarrier">0</strong>
-        <small>espera, resultado, interconsulta, egreso o cama</small>
+        <small>requieren seguimiento operativo</small>
       </article>
     </section>
 
@@ -62,17 +62,18 @@
           <h3>Así está distribuido el flujo</h3>
         </div>
       </div>
+
       <div class="flow-overview">
-        <article><span>1</span><div><b>Esperando valoración</b><strong id="stageTriage">0</strong></div></article>
+        <article><span>1</span><div><b>Valoración inicial</b><strong id="stageTriage">0</strong></div></article>
         <article><span>2</span><div><b>Estudios / resultados</b><strong id="stageDiagnostics">0</strong></div></article>
         <article><span>3</span><div><b>Interconsultas</b><strong id="stageConsults">0</strong></div></article>
-        <article><span>4</span><div><b>Listos para redefinir</b><strong id="stageRedefinition">0</strong></div></article>
-        <article><span>5</span><div><b>Egreso / hospitalización</b><strong id="stageDestination">0</strong></div></article>
+        <article><span>4</span><div><b>Redefinición médica</b><strong id="stageRedefinition">0</strong></div></article>
+        <article><span>5</span><div><b>Destino definido</b><strong id="stageDestination">0</strong></div></article>
       </div>
 
       <div class="triage-strip">
         <div class="triage-title">
-          <span>Prioridad de atención</span>
+          <span>Distribución por Triage</span>
           <small>I = mayor prioridad · V = menor prioridad</small>
         </div>
         <div class="triage-items">
@@ -92,27 +93,33 @@
           <h3>Alertas que pueden mover pacientes</h3>
         </div>
       </div>
+
       <div class="action-grid">
         <button class="action-card critical-card" data-filter="critical">
           <span class="action-dot"></span><strong id="actCritical">0</strong>
-          <b>Resultados críticos</b><small>revisión inmediata</small>
+          <b>Resultados críticos</b><small>requieren revisión inmediata</small>
         </button>
-        <button class="action-card triage-card" data-filter="triage2">
-          <span class="action-dot"></span><strong id="actTriage2">0</strong>
-          <b>Triage II pendientes</b><small>valoración prioritaria</small>
-        </button>
+
         <button class="action-card imaging-card" data-filter="imaging">
           <span class="action-dot"></span><strong id="actImaging">0</strong>
-          <b>Imágenes sin interpretar</b><small>pendiente radiología</small>
+          <b>Imágenes sin interpretar</b><small>estudio realizado</small>
         </button>
+
+        <button class="action-card consult-card" data-filter="consult_discharge">
+          <span class="action-dot"></span><strong id="actConsultDischarge">0</strong>
+          <b>Concepto de egreso</b><small>especialista respondió · falta Urgencias</small>
+        </button>
+
         <button class="action-card ready-card" data-filter="ready">
           <span class="action-dot"></span><strong id="actReady">0</strong>
-          <b>Listos para redefinición</b><small>información completa</small>
+          <b>Listos para redefinición</b><small>información necesaria disponible</small>
         </button>
+
         <button class="action-card discharge-card" data-filter="discharge">
           <span class="action-dot"></span><strong id="actDischarge">0</strong>
-          <b>Egresos en proceso</b><small>completar salida</small>
+          <b>Egreso ya definido</b><small>falta completar la salida</small>
         </button>
+
         <button class="action-card hospital-card" data-filter="hospital">
           <span class="action-dot"></span><strong id="actHospital">0</strong>
           <b>Esperando cama</b><small>hospitalización definida</small>
@@ -122,28 +129,54 @@
 
     <section class="layout-main">
       <div class="panel table-panel">
-        <div class="panel-head">
+        <div class="panel-head table-head">
           <div>
             <span class="eyebrow">¿QUIÉN NECESITA ACCIÓN PRIMERO?</span>
             <h3>Pacientes priorizados por oportunidad de intervención</h3>
             <p id="visibleSummary" class="panel-subtitle">Mostrando pacientes prioritarios.</p>
           </div>
-          <div class="filters">
-            <button class="filter active" data-filter="all">Todos</button>
-            <button class="filter" data-filter="triage2">Triage II</button>
-            <button class="filter" data-filter="critical">Críticos</button>
-            <button class="filter" data-filter="ready">Redefinir</button>
-            <button class="filter" data-filter="imaging">Radiología</button>
-            <button class="filter" data-filter="discharge">Egreso</button>
-            <button class="filter" data-filter="hospital">Cama</button>
+
+          <div class="filter-area">
+            <div class="select-filters">
+              <label>
+                <span>Triage</span>
+                <select id="triageFilter">
+                  <option value="all">Todos</option>
+                  <option value="1">Triage I</option>
+                  <option value="2">Triage II</option>
+                  <option value="3">Triage III</option>
+                  <option value="4">Triage IV</option>
+                  <option value="5">Triage V</option>
+                </select>
+              </label>
+
+              <label>
+                <span>Médico</span>
+                <select id="doctorFilter">
+                  <option value="all">Todos</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="filters">
+              <button class="filter active" data-filter="all">Todos</button>
+              <button class="filter" data-filter="critical">Críticos</button>
+              <button class="filter" data-filter="consult_discharge">Concepto egreso</button>
+              <button class="filter" data-filter="ready">Redefinir</button>
+              <button class="filter" data-filter="imaging">Radiología</button>
+              <button class="filter" data-filter="discharge">Egreso definido</button>
+              <button class="filter" data-filter="hospital">Cama</button>
+            </div>
           </div>
         </div>
+
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
                 <th>Paciente</th>
                 <th>Triage</th>
+                <th>Médico</th>
                 <th>Estancia</th>
                 <th>Estado actual</th>
                 <th>Tiempo en espera</th>
@@ -153,6 +186,7 @@
             <tbody id="patientsBody"></tbody>
           </table>
         </div>
+
         <div class="pagination">
           <button id="prevPage">← Anterior</button>
           <span id="pageLabel">Página 1 de 2</span>
@@ -180,7 +214,7 @@
       <article class="panel mini-panel">
         <div class="mini-head"><span>Impacto acumulado de la demo</span><b>simulado</b></div>
         <div class="impact-grid">
-          <div><strong id="impactDischarges">0</strong><span>Egresos completados</span></div>
+          <div><strong id="impactDischarges">0</strong><span>Salidas completadas</span></div>
           <div><strong id="impactMoves">0</strong><span>Pacientes que avanzaron</span></div>
           <div><strong id="impactMinutes">0</strong><span>Minutos “recuperados”</span></div>
         </div>
@@ -202,7 +236,7 @@
       <div><span>Laboratorio</span><b id="drawerLab">—</b></div>
       <div><span>Imagen</span><b id="drawerImage">—</b></div>
       <div><span>Interconsulta</span><b id="drawerConsult">—</b></div>
-      <div><span>Conducta</span><b id="drawerConduct">—</b></div>
+      <div><span>Conducta Urgencias</span><b id="drawerConduct">—</b></div>
     </div>
 
     <div class="timeline" id="timeline"></div>
@@ -217,49 +251,52 @@
       <button class="architecture-close" id="architectureClose">×</button>
       <span class="eyebrow">¿CÓMO FUNCIONA?</span>
       <h3>Los datos actuales se convierten en señales para actuar</h3>
-      <p>La arquitectura es ilustrativa: muestra cómo los eventos de los sistemas fuente podrían alimentar una capa central de datos, reglas y alertas.</p>
-      <div class="architecture-canvas">
-        <div class="source-node servinte">
-          <b>Servinte</b>
-          <small>Admisión · atención · interconsultas · conducta</small>
-          <i class="data-pulse p1"></i>
-        </div>
-        <div class="source-node athenea">
-          <b>Athenea</b>
-          <small>Laboratorio · muestras · resultados</small>
-          <i class="data-pulse p2"></i>
-        </div>
-        <div class="source-node radiologia">
-          <b>Radiología</b>
-          <small>Solicitud · realización · interpretación</small>
-          <i class="data-pulse p3"></i>
+      <p>La lógica es sencilla: los sistemas que ya existen alimentan una capa central que organiza la historia del paciente y genera alertas.</p>
+
+      <div class="architecture-flow">
+        <div class="architecture-sources">
+          <div class="architecture-node source">
+            <span>SISTEMA 1</span>
+            <b>Servinte</b>
+            <small>Admisión · atención · interconsultas · conducta</small>
+          </div>
+          <div class="architecture-node source">
+            <span>SISTEMA 2</span>
+            <b>Athenea</b>
+            <small>Laboratorio · muestras · resultados</small>
+          </div>
+          <div class="architecture-node source">
+            <span>SISTEMA 3</span>
+            <b>Radiología</b>
+            <small>Solicitud · realización · interpretación</small>
+          </div>
         </div>
 
-        <div class="connector c1"></div>
-        <div class="connector c2"></div>
-        <div class="connector c3"></div>
+        <div class="flow-arrow"><i></i><span>integran eventos</span></div>
 
-        <div class="central-node">
+        <div class="architecture-node fabric">
           <span>FABRIC</span>
-          <b>Integra la información</b>
-          <small>Línea de tiempo del paciente · actualización periódica</small>
+          <b>Organiza la línea de tiempo del paciente</b>
+          <small>Integra y actualiza la información operacional</small>
         </div>
 
-        <div class="connector central-link"></div>
+        <div class="flow-arrow"><i></i><span>aplica reglas</span></div>
 
-        <div class="rules-node">
-          <b>Detecta oportunidades de acción</b>
-          <small>¿Qué cambió? · ¿Quién puede avanzar? · ¿Qué requiere intervención?</small>
+        <div class="architecture-node rules">
+          <span>REGLAS</span>
+          <b>Detecta quién puede avanzar</b>
+          <small>Resultado listo · imagen interpretada · interconsulta respondida · destino pendiente</small>
         </div>
 
-        <div class="connector output-link"></div>
+        <div class="flow-arrow"><i></i><span>genera alertas</span></div>
 
-        <div class="output-node">
+        <div class="architecture-node monitor">
           <span>MONITOR</span>
           <b>Le dice al equipo dónde actuar</b>
-          <small>Alertas · priorización · gestión del flujo</small>
+          <small>Priorización · alertas · gestión del flujo</small>
         </div>
       </div>
+
       <div class="architecture-note">Demo ilustrativa. La arquitectura real se definiría con gobierno institucional, seguridad y los mecanismos de integración disponibles.</div>
     </div>
   </div>
