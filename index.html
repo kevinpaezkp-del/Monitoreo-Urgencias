@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#10347b" />
+  <title>Monitor de Flujo de Urgencias · Demo</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark"><span>♥</span> LaCardio</div>
+      <div class="brand-copy">
+        <h1>Monitor de Flujo de Urgencias</h1>
+        <p>Hagamos visible el tiempo invisible</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <div class="live"><span class="pulse"></span><span id="liveLabel">Simulación activa</span></div>
+      <div class="clock" id="clock">--:--:--</div>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="hero-strip">
+      <div>
+        <span class="eyebrow">DEMO CON DATOS SIMULADOS</span>
+        <h2>¿Qué paciente puede avanzar <em>ahora</em>?</h2>
+        <p>La herramienta integra eventos de Servinte, Athenea y Radiología para convertirlos en alertas operativas.</p>
+      </div>
+      <div class="sync-card">
+        <span>Próxima actualización</span>
+        <strong id="countdown">00:30</strong>
+      </div>
+    </section>
+
+    <section class="kpis" id="kpis">
+      <article class="kpi"><span>Pacientes en Urgencias</span><strong id="kpiTotal">0</strong><small id="kpiTotalSub">flujo activo</small></article>
+      <article class="kpi"><span>Listos para redefinición</span><strong class="blue" id="kpiReady">0</strong><small>información clave disponible</small></article>
+      <article class="kpi"><span>Alertas prioritarias</span><strong class="red" id="kpiCritical">0</strong><small>requieren acción</small></article>
+      <article class="kpi"><span>Imagen pendiente</span><strong class="amber" id="kpiImaging">0</strong><small>realizada sin interpretación</small></article>
+      <article class="kpi"><span>Egresos en proceso</span><strong class="green" id="kpiDischarge">0</strong><small>pueden liberar capacidad</small></article>
+      <article class="kpi"><span>Tiempo listo → acción</span><strong class="violet" id="kpiLatency">0 min</strong><small>mediana simulada</small></article>
+    </section>
+
+    <section class="layout-main">
+      <div class="panel table-panel">
+        <div class="panel-head">
+          <div>
+            <span class="eyebrow">VISTA OPERATIVA</span>
+            <h3>Pacientes que requieren atención del flujo</h3>
+          </div>
+          <div class="filters">
+            <button class="filter active" data-filter="all">Todos</button>
+            <button class="filter" data-filter="critical">Críticos</button>
+            <button class="filter" data-filter="ready">Redefinir</button>
+            <button class="filter" data-filter="imaging">Radiología</button>
+            <button class="filter" data-filter="discharge">Egreso</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Paciente</th><th>Estancia</th><th>Laboratorio</th><th>Imagen</th><th>Interconsulta</th><th>Conducta</th><th>Alerta</th>
+              </tr>
+            </thead>
+            <tbody id="patientsBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <aside class="panel alerts-panel">
+        <div class="panel-head compact">
+          <div>
+            <span class="eyebrow">ACTUAR AHORA</span>
+            <h3>Alertas prioritarias</h3>
+          </div>
+        </div>
+        <div id="alertsList" class="alerts-list"></div>
+      </aside>
+    </section>
+
+    <section class="bottom-grid">
+      <article class="panel mini-panel">
+        <div class="mini-head"><span>Cuellos de botella activos</span><b id="bottleneckTotal">0</b></div>
+        <div id="bottlenecks"></div>
+      </article>
+
+      <article class="panel mini-panel">
+        <div class="mini-head"><span>Movimiento de los últimos minutos</span><b class="live-badge">EN VIVO</b></div>
+        <div id="eventFeed" class="event-feed"></div>
+      </article>
+
+      <article class="panel mini-panel">
+        <div class="mini-head"><span>Impacto acumulado de la demo</span><b>simulado</b></div>
+        <div class="impact-grid">
+          <div><strong id="impactDischarges">0</strong><span>Egresos completados</span></div>
+          <div><strong id="impactMoves">0</strong><span>Pacientes que avanzaron</span></div>
+          <div><strong id="impactMinutes">0</strong><span>Minutos “recuperados”</span></div>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <div class="toast" id="toast" aria-live="polite"></div>
+
+  <div class="drawer" id="drawer">
+    <button class="drawer-close" id="drawerClose">×</button>
+    <div class="drawer-top">
+      <span class="eyebrow">LÍNEA DE TIEMPO</span>
+      <h3 id="drawerTitle">Paciente</h3>
+      <p id="drawerSub"></p>
+    </div>
+    <div class="timeline" id="timeline"></div>
+    <div class="next-action">
+      <span>Siguiente acción sugerida</span>
+      <strong id="drawerAction"></strong>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
