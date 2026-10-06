@@ -4,6 +4,8 @@ const PAGE_SIZE = 20;
 const MAX_VISIBLE_PATIENTS = 40;
 
 let activeFilter = 'all';
+let activeTriage = 'all';
+let activeDoctor = 'all';
 let currentPage = 1;
 let impact = {discharges: 18, moves: 46, minutes: 384};
 let nextId = 500;
@@ -12,6 +14,7 @@ let previousRanks = new Map();
 
 const services = ['Medicina Interna','Cardiología','Cirugía General','Neurología','Medicina Familiar','Ortopedia','Neumología','Gastroenterología'];
 const locations = ['Box 03','Box 06','Box 09','Box 12','Box 17','Box 21','Observación 02','Observación 07','Observación 11','Sillas 04','Sillas 08','Fast Track 02'];
+const doctors = ['Dra. Martínez','Dr. Rodríguez','Dra. Gómez','Dr. Herrera','Dra. López','Dr. Ramírez','Dra. Torres','Dr. Castro'];
 const patients = [];
 
 const pick = arr => arr[Math.floor(Math.random()*arr.length)];
@@ -31,9 +34,9 @@ function timeMinus(min){
   return d.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit',hour12:false});
 }
 function nowTime(withSeconds=true){
-  return new Date().toLocaleTimeString('es-CO',{
-    hour:'2-digit',minute:'2-digit',second:withSeconds?'2-digit':undefined,hour12:false
-  });
+  const opts={hour:'2-digit',minute:'2-digit',hour12:false};
+  if(withSeconds) opts.second='2-digit';
+  return new Date().toLocaleTimeString('es-CO',opts);
 }
 function stayText(m){
   const h=Math.floor(m/60), min=m%60;
@@ -46,11 +49,13 @@ function basePatient(id){
     id,
     location:pick(locations),
     service:pick(services),
+    doctor:pick(doctors),
     stayMin:stay,
     triage:weightedTriage(),
     lab:'pending',
     image:'none',
     consult:'none',
+    consultResult:'none',
     conduct:'pending',
     alert:'waiting',
     alertMin:0,
@@ -66,15 +71,7 @@ function basePatient(id){
 function configurePatient(p,kind){
   const stamp=timeMinus(rand(5,Math.max(6,p.stayMin-1)));
 
-  if(kind==='triage2'){
-    p.triage=2;
-    p.stage='triage';
-    p.alert='triage2';
-    p.alertMin=rand(6,32);
-    p.lab='pending';
-    p.image='none';
-    p.events.push({t:stamp,text:'Clasificado Triage II · pendiente valoración médica'});
-  } else if(kind==='critical'){
+  if(kind==='critical'){
     p.stage='diagnostics';
     p.triage=Math.min(p.triage,2);
     p.lab='critical';
@@ -98,11 +95,22 @@ function configurePatient(p,kind){
     p.alert='consult';
     p.alertMin=rand(10,110);
     p.events.push({t:stamp,text:'Interconsulta solicitada'});
+  } else if(kind==='consult_discharge'){
+    p.stage='redefinition';
+    p.lab='done';
+    p.image=chance(.7)?'reported':'not_required';
+    p.consult='answered';
+    p.consultResult='discharge';
+    p.conduct='pending';
+    p.alert='consult_discharge';
+    p.alertMin=rand(8,80);
+    p.events.push({t:stamp,text:'Especialidad respondió con concepto de egreso'});
   } else if(kind==='ready'){
     p.stage='redefinition';
     p.lab='done';
     p.image=chance(.65)?'reported':'not_required';
     p.consult=chance(.45)?'answered':'none';
+    p.consultResult=p.consult==='answered'?'continue':'none';
     p.conduct='reevaluate';
     p.alert='ready';
     p.alertMin=rand(4,55);
@@ -112,19 +120,21 @@ function configurePatient(p,kind){
     p.lab='done';
     p.image=chance(.6)?'reported':'not_required';
     p.consult=chance(.35)?'answered':'none';
+    p.consultResult=p.consult==='answered'?'discharge':'none';
     p.conduct='discharge';
     p.alert='discharge';
     p.alertMin=rand(5,75);
-    p.events.push({t:stamp,text:'Egreso definido · pendiente completar salida'});
+    p.events.push({t:stamp,text:'Médico de Urgencias definió egreso · pendiente salida'});
   } else if(kind==='hospital'){
     p.stage='destination';
     p.lab='done';
     p.image=chance(.7)?'reported':'not_required';
     p.consult=chance(.5)?'answered':'none';
+    p.consultResult=p.consult==='answered'?'hospitalize':'none';
     p.conduct='hospitalize';
     p.alert='hospital';
     p.alertMin=rand(20,180);
-    p.events.push({t:stamp,text:'Hospitalización definida · pendiente cama'});
+    p.events.push({t:stamp,text:'Médico de Urgencias definió hospitalización · pendiente cama'});
   } else {
     p.stage=pick(['triage','diagnostics','diagnostics','consult']);
     p.lab=chance(.55)?'done':'pending';
@@ -136,20 +146,21 @@ function configurePatient(p,kind){
   }
   return p;
 }
+
 function makePatient(id,kind='waiting'){
   return configurePatient(basePatient(id),kind);
 }
 
 function seedPatients(){
   const plan = [
-    ['triage2',14],
     ['critical',6],
-    ['imaging',24],
-    ['consult',19],
-    ['ready',28],
-    ['discharge',36],
+    ['imaging',26],
+    ['consult',22],
+    ['consult_discharge',18],
+    ['ready',24],
+    ['discharge',32],
     ['hospital',24],
-    ['waiting',99]
+    ['waiting',98]
   ];
   plan.forEach(([kind,n])=>{
     for(let i=0;i<n;i++){
@@ -163,45 +174,44 @@ seedPatients();
 function alertTitle(p){
   return {
     critical:'Resultado crítico disponible',
-    triage2:'Triage II pendiente de valoración',
-    ready:'Listo para redefinición',
     imaging:'Imagen realizada pendiente de interpretación',
     consult:'Interconsulta pendiente',
-    discharge:'Egreso definido pendiente de salida',
+    consult_discharge:'Especialista sugiere egreso',
+    ready:'Listo para redefinición médica',
+    discharge:'Egreso definido por Urgencias',
     hospital:'Hospitalización definida esperando cama',
     waiting:'Atención en curso'
   }[p.alert] || 'Atención en curso';
 }
+
 function actionFor(p){
   return {
     critical:'Revisar resultado crítico y registrar conducta',
-    triage2:'Priorizar valoración médica',
-    ready:'Reevaluar y definir conducta',
     imaging:'Gestionar interpretación de imagen',
     consult:'Gestionar respuesta de especialidad',
+    consult_discharge:'Revisar interconsulta y definir conducta en Urgencias',
+    ready:'Reevaluar y definir conducta',
     discharge:'Completar salida del paciente',
     hospital:'Continuar gestión de cama y traslado',
     waiting:'Continuar seguimiento'
   }[p.alert] || 'Continuar seguimiento';
 }
+
 function stateDetail(p){
+  if(p.alert==='consult_discharge') return 'Especialidad ya respondió; Urgencias aún debe definir';
   if(p.alert==='ready') return 'Resultados e hitos clave disponibles';
-  if(p.alert==='discharge') return 'Paciente puede liberar capacidad';
-  if(p.alert==='hospital') return 'Pendiente disponibilidad / traslado';
+  if(p.alert==='discharge') return 'Conducta de egreso ya registrada por Urgencias';
+  if(p.alert==='hospital') return 'Hospitalización definida; falta cama / traslado';
   if(p.alert==='imaging') return 'Estudio realizado, informe pendiente';
   if(p.alert==='consult') return 'Solicitud enviada a especialidad';
   if(p.alert==='critical') return 'Requiere revisión prioritaria';
-  if(p.alert==='triage2') return 'Clasificado, aún sin valoración';
   return 'Proceso asistencial activo';
 }
-function rowCategory(p){
-  if(['triage2','critical','ready','imaging','discharge','hospital'].includes(p.alert)) return p.alert;
-  return 'other';
-}
+
 function priority(p){
   const base={
     critical:10,
-    triage2:9,
+    consult_discharge:9,
     ready:8,
     imaging:6,
     consult:5,
@@ -217,18 +227,21 @@ function render(){
   renderStages();
   renderTriage();
   renderActions();
+  renderDoctorOptions();
   renderPatients();
   renderBottlenecks();
   renderEvents();
   renderImpact();
 }
+
 function renderHeadline(){
-  const canAdvance=patients.filter(p=>['ready','discharge'].includes(p.alert)).length;
+  const canAdvance=patients.filter(p=>['ready','consult_discharge','discharge'].includes(p.alert)).length;
   const barriers=patients.filter(p=>p.alert!=='waiting').length;
   document.querySelector('#kpiTotal').textContent=patients.length;
   document.querySelector('#kpiCanAdvance').textContent=canAdvance;
   document.querySelector('#kpiBarrier').textContent=barriers;
 }
+
 function renderStages(){
   const counts={
     triage:patients.filter(p=>p.stage==='triage').length,
@@ -243,31 +256,55 @@ function renderStages(){
   document.querySelector('#stageRedefinition').textContent=counts.redefinition;
   document.querySelector('#stageDestination').textContent=counts.destination;
 }
+
 function renderTriage(){
   for(let i=1;i<=5;i++){
     document.querySelector(`#triage${i}`).textContent=patients.filter(p=>p.triage===i).length;
   }
 }
+
 function renderActions(){
   document.querySelector('#actCritical').textContent=patients.filter(p=>p.alert==='critical').length;
-  document.querySelector('#actTriage2').textContent=patients.filter(p=>p.alert==='triage2').length;
   document.querySelector('#actImaging').textContent=patients.filter(p=>p.alert==='imaging').length;
+  document.querySelector('#actConsultDischarge').textContent=patients.filter(p=>p.alert==='consult_discharge').length;
   document.querySelector('#actReady').textContent=patients.filter(p=>p.alert==='ready').length;
   document.querySelector('#actDischarge').textContent=patients.filter(p=>p.alert==='discharge').length;
   document.querySelector('#actHospital').textContent=patients.filter(p=>p.alert==='hospital').length;
 }
+
+function renderDoctorOptions(){
+  const select=document.querySelector('#doctorFilter');
+  if(select.options.length>1) return;
+  doctors.forEach(d=>{
+    const opt=document.createElement('option');
+    opt.value=d;
+    opt.textContent=d;
+    select.appendChild(opt);
+  });
+}
+
 function triageBadge(t){
   return `<span class="triage-badge t${t}">${t}</span>`;
 }
+
 function waitChip(p){
   if(!p.alertMin) return '<span class="wait-chip">En proceso</span>';
   const cls=p.alertMin>=60?'hot':p.alertMin>=30?'warn':'';
   return `<span class="wait-chip ${cls}">${p.alertMin} min</span>`;
 }
 
+function matchesAlertFilter(p){
+  if(activeFilter==='all') return true;
+  return p.alert===activeFilter;
+}
+
 function getFilteredRanked(){
   const sorted=[...patients].sort((a,b)=>priority(b)-priority(a));
-  return sorted.filter(p=>activeFilter==='all'||rowCategory(p)===activeFilter).slice(0,MAX_VISIBLE_PATIENTS);
+  return sorted
+    .filter(matchesAlertFilter)
+    .filter(p=>activeTriage==='all'||String(p.triage)===activeTriage)
+    .filter(p=>activeDoctor==='all'||p.doctor===activeDoctor)
+    .slice(0,MAX_VISIBLE_PATIENTS);
 }
 
 function renderPatients(){
@@ -280,8 +317,13 @@ function renderPatients(){
   const body=document.querySelector('#patientsBody');
   body.innerHTML='';
 
+  const filterText=[
+    activeTriage!=='all'?`Triage ${activeTriage}`:null,
+    activeDoctor!=='all'?activeDoctor:null
+  ].filter(Boolean).join(' · ');
+
   document.querySelector('#visibleSummary').textContent=
-    `Mostrando ${visible.length} pacientes de los ${Math.min(ranked.length,MAX_VISIBLE_PATIENTS)} más prioritarios · ${patients.length} activos en la simulación.`;
+    `Mostrando ${visible.length} pacientes de los ${Math.min(ranked.length,MAX_VISIBLE_PATIENTS)} más prioritarios${filterText?' · '+filterText:''} · ${patients.length} activos.`;
 
   const newRanks=new Map();
   ranked.forEach((p,idx)=>newRanks.set(p.id,idx));
@@ -290,6 +332,7 @@ function renderPatients(){
     const globalRank=newRanks.get(p.id);
     const oldRank=previousRanks.get(p.id);
     const tr=document.createElement('tr');
+
     if(oldRank!==undefined && globalRank<oldRank) tr.classList.add('row-rise');
     else if(p.changed) tr.classList.add('flash');
 
@@ -299,6 +342,7 @@ function renderPatients(){
         <span class="sub">${p.location} · ${p.service}</span>
       </td>
       <td>${triageBadge(p.triage)}</td>
+      <td><span class="doctor-name">${p.doctor}</span></td>
       <td><b>${stayText(p.stayMin)}</b></td>
       <td>
         <span class="state-title">${oldRank!==undefined && globalRank<oldRank?'↑ ':''}${alertTitle(p)}</span>
@@ -307,6 +351,7 @@ function renderPatients(){
       <td>${waitChip(p)}</td>
       <td><span class="action-link">${actionFor(p)}</span></td>
     `;
+
     tr.onclick=()=>openPatient(p);
     body.appendChild(tr);
     setTimeout(()=>p.changed=false,1600);
@@ -320,11 +365,11 @@ function renderPatients(){
 
 function renderBottlenecks(){
   const data=[
-    ['Triage II',patients.filter(p=>p.alert==='triage2').length],
     ['Radiología',patients.filter(p=>p.alert==='imaging').length],
+    ['Interconsultas',patients.filter(p=>p.alert==='consult').length],
+    ['Concepto egreso',patients.filter(p=>p.alert==='consult_discharge').length],
     ['Reevaluación',patients.filter(p=>p.alert==='ready').length],
-    ['Interconsulta',patients.filter(p=>p.alert==='consult').length],
-    ['Egreso',patients.filter(p=>p.alert==='discharge').length],
+    ['Salida pendiente',patients.filter(p=>p.alert==='discharge').length],
     ['Esperando cama',patients.filter(p=>p.alert==='hospital').length]
   ];
   document.querySelector('#bottleneckTotal').textContent=data.reduce((a,b)=>a+b[1],0);
@@ -341,16 +386,19 @@ function renderEvents(){
     ).join('') ||
     '<div class="event-item"><time>ahora</time><div><b>Simulación iniciada</b><span>Esperando el siguiente evento.</span></div></div>';
 }
+
 function renderImpact(){
   document.querySelector('#impactDischarges').textContent=impact.discharges;
   document.querySelector('#impactMoves').textContent=impact.moves;
   document.querySelector('#impactMinutes').textContent=impact.minutes;
 }
+
 function logEvent(title,text,toast=false){
   eventLog.unshift({time:nowTime(false),title,text});
   eventLog=eventLog.slice(0,30);
   if(toast) showToast(title,text);
 }
+
 function showToast(title,text){
   const t=document.querySelector('#toast');
   t.innerHTML=`<strong>${title}</strong><span>${text}</span>`;
@@ -364,12 +412,16 @@ const displayStatus={
   consult:{none:'No solicitada',pending:'Pendiente',answered:'Respondida'},
   conduct:{pending:'Pendiente',reevaluate:'Reevaluar',discharge:'Egreso definido',hospitalize:'Hospitalizar'}
 };
+
 function openPatient(p){
   document.querySelector('#drawerTitle').textContent=`Paciente ${String(p.id).padStart(3,'0')}`;
-  document.querySelector('#drawerSub').textContent=`${p.location} · ${p.service} · Triage ${p.triage} · ${stayText(p.stayMin)}`;
+  document.querySelector('#drawerSub').textContent=`${p.location} · ${p.service} · Triage ${p.triage} · ${p.doctor} · ${stayText(p.stayMin)}`;
   document.querySelector('#drawerLab').textContent=displayStatus.lab[p.lab]||p.lab;
   document.querySelector('#drawerImage').textContent=displayStatus.image[p.image]||p.image;
-  document.querySelector('#drawerConsult').textContent=displayStatus.consult[p.consult]||p.consult;
+  document.querySelector('#drawerConsult').textContent=
+    p.consultResult==='discharge'?'Respondida · concepto egreso':
+    p.consultResult==='hospitalize'?'Respondida · hospitalizar':
+    displayStatus.consult[p.consult]||p.consult;
   document.querySelector('#drawerConduct').textContent=displayStatus.conduct[p.conduct]||p.conduct;
   document.querySelector('#timeline').innerHTML=p.events.slice(-10).map(e=>
     `<div class="tl-event"><strong>${e.t}</strong><span>${e.text}</span></div>`
@@ -386,13 +438,29 @@ function setFilter(filter){
   document.querySelectorAll('.filter').forEach(x=>x.classList.toggle('active',x.dataset.filter===filter));
   renderPatients();
 }
+
 document.querySelectorAll('.filter').forEach(b=>b.onclick=()=>setFilter(b.dataset.filter));
 document.querySelectorAll('.action-card').forEach(b=>b.onclick=()=>{
   setFilter(b.dataset.filter);
   document.querySelector('.table-panel').scrollIntoView({behavior:'smooth',block:'start'});
 });
 
-document.querySelector('#prevPage').onclick=()=>{if(currentPage>1){currentPage--;renderPatients();}};
+document.querySelector('#triageFilter').onchange=e=>{
+  activeTriage=e.target.value;
+  currentPage=1;
+  renderPatients();
+};
+
+document.querySelector('#doctorFilter').onchange=e=>{
+  activeDoctor=e.target.value;
+  currentPage=1;
+  renderPatients();
+};
+
+document.querySelector('#prevPage').onclick=()=>{
+  if(currentPage>1){currentPage--;renderPatients();}
+};
+
 document.querySelector('#nextPage').onclick=()=>{
   const pages=Math.max(1,Math.ceil(getFilteredRanked().length/PAGE_SIZE));
   if(currentPage<pages){currentPage++;renderPatients();}
@@ -439,10 +507,10 @@ function simulationTick(){
 
 function addPatient(){
   nextId++;
-  const p=makePatient(nextId,chance(.15)?'triage2':'waiting');
+  const p=makePatient(nextId,'waiting');
   p.stayMin=rand(5,35);
   p.triage=weightedTriage();
-  if(p.alert==='triage2') p.triage=2;
+  p.doctor=pick(doctors);
   p.events=[
     {t:nowTime(false),text:'Nuevo ingreso a Urgencias'},
     {t:nowTime(false),text:`Triage ${p.triage} registrado`}
@@ -456,6 +524,7 @@ function completeExit(){
   const discharge=patients.filter(p=>p.alert==='discharge');
   const hospital=patients.filter(p=>p.alert==='hospital'&&p.alertMin>35);
   const candidates=chance(.75)&&discharge.length?discharge:hospital;
+
   if(!candidates.length) return;
 
   const p=pick(candidates);
@@ -465,7 +534,7 @@ function completeExit(){
   if(p.alert==='discharge'){
     impact.discharges++;
     impact.minutes+=rand(8,32);
-    logEvent('Egreso completado',`Paciente ${String(p.id).padStart(3,'0')} salió de Urgencias y liberó capacidad.`,true);
+    logEvent('Salida completada',`Paciente ${String(p.id).padStart(3,'0')} salió de Urgencias y liberó capacidad.`,true);
   } else {
     logEvent('Traslado a hospitalización',`Paciente ${String(p.id).padStart(3,'0')} recibió cama y salió de Urgencias.`,chance(.25));
   }
@@ -478,18 +547,7 @@ function advanceRandomPatient(){
   const stamp=nowTime(false);
   let changed=true;
 
-  if(p.alert==='triage2'){
-    p.stage='diagnostics';
-    p.alert='waiting';
-    p.alertMin=0;
-    p.lab=chance(.75)?'pending':'done';
-    p.image=chance(.55)?'ordered':'none';
-    p.conduct='pending';
-    p.events.push({t:stamp,text:'Valoración médica completada'});
-    logEvent('Paciente valorado',`Paciente ${String(p.id).padStart(3,'0')} · Triage II avanzó a ayudas diagnósticas.`,chance(.15));
-    impact.moves++;
-  }
-  else if(p.alert==='critical'){
+  if(p.alert==='critical'){
     p.lab='done';
     p.stage='redefinition';
     p.alert='ready';
@@ -500,15 +558,26 @@ function advanceRandomPatient(){
     impact.moves++;
     impact.minutes+=rand(4,12);
   }
+
   else if(p.alert==='imaging'){
     p.image='reported';
     p.events.push({t:stamp,text:'Imagen interpretada'});
+
     if(p.lab==='done'&&(p.consult==='answered'||p.consult==='none')){
       p.stage='redefinition';
-      p.alert='ready';
-      p.alertMin=0;
-      p.conduct='reevaluate';
-      logEvent('Imagen interpretada',`Paciente ${String(p.id).padStart(3,'0')} quedó listo para redefinición.`,true);
+
+      if(p.consultResult==='discharge'){
+        p.alert='consult_discharge';
+        p.alertMin=0;
+        p.conduct='pending';
+        logEvent('Imagen + interconsulta completas',`Paciente ${String(p.id).padStart(3,'0')} tiene concepto de egreso pendiente de revisión por Urgencias.`,true);
+      } else {
+        p.alert='ready';
+        p.alertMin=0;
+        p.conduct='reevaluate';
+        logEvent('Imagen interpretada',`Paciente ${String(p.id).padStart(3,'0')} quedó listo para redefinición.`,true);
+      }
+
       impact.moves++;
     } else {
       p.alert='waiting';
@@ -516,10 +585,26 @@ function advanceRandomPatient(){
       logEvent('Imagen interpretada',`Paciente ${String(p.id).padStart(3,'0')} ya tiene informe de Radiología.`);
     }
   }
+
   else if(p.alert==='consult'){
     p.consult='answered';
-    p.events.push({t:stamp,text:'Interconsulta respondida'});
-    if(p.lab==='done'&&(p.image==='reported'||p.image==='not_required'||p.image==='none')){
+    p.consultResult=chance(.58)?'discharge':chance(.45)?'hospitalize':'continue';
+    p.events.push({
+      t:stamp,
+      text:p.consultResult==='discharge'?'Interconsulta respondida · especialista sugiere egreso':
+           p.consultResult==='hospitalize'?'Interconsulta respondida · especialista sugiere hospitalización':
+           'Interconsulta respondida · continuar manejo'
+    });
+
+    if(p.consultResult==='discharge'){
+      p.stage='redefinition';
+      p.alert='consult_discharge';
+      p.alertMin=0;
+      p.conduct='pending';
+      logEvent('Concepto de egreso',`Paciente ${String(p.id).padStart(3,'0')} espera revisión del médico de Urgencias.`,true);
+      impact.moves++;
+    }
+    else if(p.lab==='done'&&(p.image==='reported'||p.image==='not_required'||p.image==='none')){
       p.stage='redefinition';
       p.alert='ready';
       p.alertMin=0;
@@ -531,29 +616,56 @@ function advanceRandomPatient(){
       p.stage='diagnostics';
     }
   }
+
+  else if(p.alert==='consult_discharge'){
+    p.stage='destination';
+    if(chance(.9)){
+      p.conduct='discharge';
+      p.alert='discharge';
+      p.alertMin=0;
+      p.events.push({t:stamp,text:'Médico de Urgencias revisó interconsulta y definió egreso'});
+      logEvent('Egreso definido por Urgencias',`Paciente ${String(p.id).padStart(3,'0')} pasa a completar su salida.`,true);
+    } else {
+      p.conduct='reevaluate';
+      p.alert='ready';
+      p.alertMin=0;
+      p.events.push({t:stamp,text:'Médico de Urgencias revisó interconsulta y mantiene reevaluación'});
+      logEvent('Conducta redefinida',`Paciente ${String(p.id).padStart(3,'0')} requiere nueva reevaluación.`);
+    }
+    impact.moves++;
+    impact.minutes+=rand(6,20);
+  }
+
   else if(p.alert==='ready'){
     p.conduct=chance(.83)?'discharge':'hospitalize';
     p.stage='destination';
     p.alertMin=0;
-    p.events.push({t:stamp,text:p.conduct==='discharge'?'Egreso definido':'Hospitalización definida'});
+    p.events.push({
+      t:stamp,
+      text:p.conduct==='discharge'?'Médico de Urgencias definió egreso':'Médico de Urgencias definió hospitalización'
+    });
 
     if(p.conduct==='discharge'){
       p.alert='discharge';
-      logEvent('Egreso definido',`Paciente ${String(p.id).padStart(3,'0')} entra a ruta de salida.`,true);
+      logEvent('Egreso definido por Urgencias',`Paciente ${String(p.id).padStart(3,'0')} pasa a completar su salida.`,true);
     } else {
       p.alert='hospital';
       logEvent('Hospitalización definida',`Paciente ${String(p.id).padStart(3,'0')} queda pendiente de cama.`);
     }
+
     impact.moves++;
     impact.minutes+=rand(5,18);
   }
+
   else if(p.alert==='waiting'){
     const choices=[];
+
     if(p.stage==='triage') choices.push('valuate','valuate');
     if(p.lab==='pending') choices.push('lab','lab');
     if(p.image==='ordered') choices.push('imagePerform');
     if(p.image==='performed') choices.push('imageReport');
     if(p.consult==='pending') choices.push('consult');
+
     if(!choices.length) choices.push('lab','consultRequest','imageOrder');
 
     const action=pick(choices);
@@ -563,6 +675,7 @@ function advanceRandomPatient(){
       p.events.push({t:stamp,text:'Valoración médica completada'});
       logEvent('Valoración completada',`Paciente ${String(p.id).padStart(3,'0')} inicia definición diagnóstica.`);
     }
+
     else if(action==='lab'){
       p.lab=chance(.04)?'critical':'done';
       p.events.push({t:stamp,text:p.lab==='critical'?'Resultado crítico disponible':'Laboratorios completos'});
@@ -573,20 +686,31 @@ function advanceRandomPatient(){
         logEvent('Resultado crítico',`Paciente ${String(p.id).padStart(3,'0')} requiere revisión inmediata.`,true);
       } else if((p.image==='reported'||p.image==='not_required'||p.image==='none')&&(p.consult==='answered'||p.consult==='none')&&chance(.55)){
         p.stage='redefinition';
-        p.alert='ready';
-        p.alertMin=0;
-        p.conduct='reevaluate';
-        logEvent('Laboratorios completos',`Paciente ${String(p.id).padStart(3,'0')} quedó listo para redefinición.`,chance(.3));
+
+        if(p.consultResult==='discharge'){
+          p.alert='consult_discharge';
+          p.conduct='pending';
+          p.alertMin=0;
+          logEvent('Paciente listo para revisión',`Paciente ${String(p.id).padStart(3,'0')} tiene concepto de egreso pendiente de Urgencias.`,chance(.3));
+        } else {
+          p.alert='ready';
+          p.alertMin=0;
+          p.conduct='reevaluate';
+          logEvent('Laboratorios completos',`Paciente ${String(p.id).padStart(3,'0')} quedó listo para redefinición.`,chance(.3));
+        }
+
         impact.moves++;
       } else {
         logEvent('Laboratorio actualizado',`Paciente ${String(p.id).padStart(3,'0')} ya tiene resultados disponibles.`);
       }
     }
+
     else if(action==='imageOrder'){
       p.image='ordered';
       p.stage='diagnostics';
       p.events.push({t:stamp,text:'Imagen solicitada'});
     }
+
     else if(action==='imagePerform'){
       p.image='performed';
       p.alert='imaging';
@@ -594,11 +718,13 @@ function advanceRandomPatient(){
       p.events.push({t:stamp,text:'Imagen realizada · pendiente interpretación'});
       logEvent('Imagen realizada',`Paciente ${String(p.id).padStart(3,'0')} queda pendiente de Radiología.`);
     }
+
     else if(action==='imageReport'){
       p.image='reported';
       p.events.push({t:stamp,text:'Imagen interpretada'});
       logEvent('Imagen interpretada',`Paciente ${String(p.id).padStart(3,'0')} ya tiene informe.`);
     }
+
     else if(action==='consultRequest'){
       p.consult='pending';
       p.stage='consult';
@@ -607,18 +733,16 @@ function advanceRandomPatient(){
       p.events.push({t:stamp,text:'Interconsulta solicitada'});
       logEvent('Nueva interconsulta',`Paciente ${String(p.id).padStart(3,'0')} espera especialidad.`);
     }
-    else if(action==='consult'){
-      p.consult='answered';
-      p.events.push({t:stamp,text:'Interconsulta respondida'});
-    }
   }
+
   else if(p.alert==='discharge'){
     if(chance(.34)){
       impact.minutes+=rand(4,14);
-      p.events.push({t:stamp,text:'Actividad de egreso completada'});
-      logEvent('Egreso avanza',`Paciente ${String(p.id).padStart(3,'0')} completó una actividad de salida.`);
+      p.events.push({t:stamp,text:'Actividad de salida completada'});
+      logEvent('Salida avanza',`Paciente ${String(p.id).padStart(3,'0')} completó una actividad posterior al egreso.`);
     } else changed=false;
   }
+
   else if(p.alert==='hospital'){
     if(chance(.18)){
       logEvent('Gestión de cama',`Paciente ${String(p.id).padStart(3,'0')} continúa pendiente de asignación.`);
