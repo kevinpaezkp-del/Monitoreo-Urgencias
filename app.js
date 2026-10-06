@@ -633,6 +633,35 @@ function setFilter(filter){
     x.classList.toggle('active',x.dataset.filter===filter);
   });
 
+  const labels={
+    all:'Todos',
+    assessment:'Valoración',
+    lab:'Laboratorio',
+    image:'Imagen',
+    consult:'Interconsulta',
+    redefine:'Redefinir',
+    bed_wait:'Cama',
+    lab_pending:'Laboratorio pendiente',
+    lab_ready:'Laboratorio listo',
+    image_pending:'Imagen pendiente',
+    image_interpretation:'Pendiente interpretación',
+    consult_pending:'Interconsulta pendiente',
+    consult_answered:'Interconsulta respondida',
+    critical:'Resultado crítico',
+    ready_redefine:'Listo para redefinir'
+  };
+
+  const notice=document.querySelector('#activeFilterNotice');
+  const label=document.querySelector('#activeFilterLabel');
+
+  if(filter==='all'){
+    notice.hidden=true;
+    label.textContent='Todos';
+  } else {
+    notice.hidden=false;
+    label.textContent=labels[filter]||filter;
+  }
+
   renderPatients();
 }
 
@@ -646,6 +675,8 @@ document.querySelectorAll('.action-card').forEach(b=>{
     document.querySelector('.table-panel').scrollIntoView({behavior:'smooth',block:'start'});
   };
 });
+
+document.querySelector('#clearFilterBtn').onclick=()=>setFilter('all');
 
 document.querySelector('#triageFilter').onchange=e=>{
   activeTriage=e.target.value;
