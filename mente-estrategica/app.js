@@ -16,7 +16,7 @@
   function parseDate(value){
     if(value==null||value==="")return null;
     if(value instanceof Date)return isNaN(value)?null:value;
-    if(typeof value==="number"&&Number.isFinite(value)){const d=new Date(Math.round((value-25569)*86400000));return isNaN(d)?null:d;}
+    if(typeof value==="number"&&Number.isFinite(value)){const utc=new Date(Math.round((value-25569)*86400000));if(isNaN(utc))return null;return new Date(utc.getUTCFullYear(),utc.getUTCMonth(),utc.getUTCDate(),utc.getUTCHours(),utc.getUTCMinutes(),utc.getUTCSeconds());}
     const s=clean(value);
     const iso=s.match(/^(\d{4})-(\d\d?)-(\d\d?)(?:[ T](\d\d?):(\d\d)(?::(\d\d))?)?/);
     const es=s.match(/^(\d\d?)\/(\d\d?)\/(\d{4})(?:[ T](\d\d?):(\d\d)(?::(\d\d))?)?/);
