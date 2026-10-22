@@ -1,12 +1,12 @@
 # Mente Estratégica · Laboratorios de digitalización
 
-Sitio público de aprendizaje con 23 diapositivas navegables, 32 solicitudes ficticias de traslado interno, tableros calculados en el navegador y cinco prompts completos.
+Sitio público de aprendizaje con PowerPoint original descargable (23 diapositivas editables), 32 solicitudes ficticias de traslado interno, dashboard calculado en el navegador y cinco prompts completos.
 
 ## Enlace de acceso
 https://kevinpaezkp-del.github.io/Monitoreo-Urgencias/mente-estrategica/
 
 ## Ruta didáctica
-1. Antes de esta web, presentar la PPT teórica del Módulo 4.
+1. Presentar primero la PPT teórica del Módulo 4. Descargar desde la página de Recursos el PowerPoint de los laboratorios prácticos.
 2. Laboratorio 1: SharePoint → Lista de 8 columnas → Crear 4 casos → Completar con 28 → Vistas por estado → Excel → HTML → Power Automate.
 3. Laboratorio 2: CSV → Lista en Slack y canal → Slackbot → Superficie interactiva.
 
@@ -25,6 +25,6 @@ https://kevinpaezkp-del.github.io/Monitoreo-Urgencias/mente-estrategica/
 ## Seguridad y limitaciones
 No usar información real de pacientes. El archivo importado se procesa en el navegador; cargarlo no modifica SharePoint ni Slack, ni se sincroniza con esas plataformas. Una copia del HTML guardada con datos incorporados podría revelar esos datos a quienes la reciban. No guardar datos sensibles.
 
-Presentación HTML basada en los contenidos originales de la presentación práctica. Las diapositivas web son una adaptación visual para la navegación, no un archivo PPTX editable.
+El visor HTML adaptado se retiró. El PowerPoint editable original `Laboratorios_Guiados_Mente_Estrategica.pptx` está disponible directamente desde la página de Recursos y se genera mediante `generar-pptx.js` con GitHub Actions.
 
 © Material educativo del curso Mente Estratégica.
