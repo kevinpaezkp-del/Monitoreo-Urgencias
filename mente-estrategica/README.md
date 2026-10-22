@@ -28,3 +28,10 @@ No usar información real de pacientes. El archivo importado se procesa en el na
 El visor HTML adaptado se retiró. El PowerPoint editable original `Laboratorios_Guiados_Mente_Estrategica.pptx` está disponible directamente desde la página de Recursos y se genera mediante `generar-pptx.js` con GitHub Actions.
 
 © Material educativo del curso Mente Estratégica.
+
+
+## Material para estudiantes (actualización)
+
+- El Excel descargable de Recursos conserva únicamente la hoja `02_PEGAR_28`, con 28 registros y 8 campos; los 4 primeros registros se crean manualmente durante la práctica en SharePoint.
+- La sección Prompts tiene cuatro instrucciones: HTML, crear lista en Slack, generar dashboard interno desde la lista y modificar una solicitud/resumir pendientes. Se eliminó el prompt de tablas dinámicas.
+- El dashboard de demostración conserva los 32 registros del ejercicio completo (4 + 28); su importación acepta bases con distinto número de filas.

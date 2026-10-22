@@ -54,7 +54,13 @@
     $("#slidePrev").disabled=slideIndex===0;$("#slideNext").disabled=slideIndex===SOURCE.slides.length-1;
   }
   function displayPrompts(){
-    $("#promptCards").innerHTML=(SOURCE.prompts||[]).map(p=>"<article class='promptcard'><span class='id'>PROMPT 0"+p.number+"</span><h3>"+esc(p.title)+"</h3><p>"+(p.number===1?"Dashboard HTML completo: filtros, fechas válidas, actualización y guardado.":p.number===2?"Construir gráficas directamente desde Excel.":p.number===3?"Crear la lista de Slack desde la base CSV.":p.number===4?"Visualización dentro de Slackbot usando una lista existente.":"Completar o editar información con control y verificación.")+"</p><details><summary>Mostrar el prompt completo</summary><pre>"+esc(p.text)+"</pre></details><button class='btn primary copyPrompt' data-prompt='"+p.number+"'>Copiar prompt ↗</button></article>").join("");
+    const descriptions = {
+      1:"Crea un dashboard HTML desde el Excel, con filtros combinados, métricas dinámicas y manejo de fechas vacías.",
+      2:"Adjunta tu Excel y pídele a Slackbot que cree y configure la lista en un canal.",
+      3:"Genera una superficie interactiva directamente desde la lista de Slack.",
+      4:"Consulta los pendientes y practica la actualización controlada de una solicitud."
+    };
+    $("#promptCards").innerHTML=(SOURCE.prompts||[]).map(p=>"<article class='promptcard'><span class='id'>PROMPT 0"+p.number+"</span><h3>"+esc(p.title)+"</h3><p>"+esc(descriptions[p.number]||"")+" </p><details><summary>Mostrar el prompt completo</summary><pre>"+esc(p.text)+"</pre></details><button class='btn primary copyPrompt' data-prompt='"+p.number+"'>Copiar prompt ↗</button></article>").join("");
   }
   function buildFilterControls(){
     const el=$("#filterControls");
@@ -160,17 +166,15 @@
     const url=URL.createObjectURL(new Blob([content],{type:type||"text/plain;charset=utf-8"}));const a=document.createElement("a");a.href=url;a.download=name;a.style.display="none";document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);
   }
   function downloadExcel(){
-    if(!window.XLSX){announce("No se cargó Excel: descarga el CSV disponible en esta página.",true);return;}
-    const wb=XLSX.utils.book_new();const originals=SOURCE.rows;
-    const tableRows=originals.map(r=>Object.fromEntries(COLS.map(c=>[c,r[c]||""])));
-    const add=(name,data)=>{const sheet=XLSX.utils.aoa_to_sheet([COLS,...data.map(r=>COLS.map(c=>r[c]))]);sheet["!cols"]=[{wch:37},{wch:20},{wch:20},{wch:14},{wch:15},{wch:19},{wch:22},{wch:22}];XLSX.utils.book_append_sheet(wb,sheet,name);};
-    add("01_BASE_32",tableRows);add("02_PEGAR_28",tableRows.slice(4));
-    const dict=[["Campo","Tipo","Configuración"],["Solicitud","Texto","Obligatorio"],["Origen","Elección","Urgencias | Hospitalización | UCI | Quirófano"],["Destino","Elección","Hospitalización | UCI | Imágenes | Quirófano"],["Prioridad","Elección","Alta | Media | Baja"],["Estado","Elección","Creado | Asignado | Cerrado; predeterminado Creado"],["Responsable","Elección","Sin asignar | Equipo A | Equipo B | Equipo C"],["FechaSolicitud","Fecha y hora","Obligatoria"],["FechaCierre","Fecha y hora","Opcional; solo para cerrados"]];
-    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(dict),"03_DICCIONARIO");
-    const instructions=[["MENTE ESTRATÉGICA · LABORATORIO","Solicitudes de traslado interno; datos ficticios"],["Paso 1","Crear lista SharePoint con 8 campos"],["Paso 2","Registrar manualmente TR-001 a TR-004"],["Paso 3","Pegar filas de la hoja 02_PEGAR_28"],["Paso 4","Crear vistas, exportar a Excel y probar flujo"],["Paso 5","Reutilizar la misma base con Slackbot"],["Nota","La base no contiene nombres ni datos de pacientes"]];
-    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(instructions),"00_INSTRUCCIONES");
+    if(!window.XLSX){announce("No se pudo cargar el lector de Excel. Usa el enlace de descarga principal.",true);return;}
+    const wb=XLSX.utils.book_new();
+    const names=["Solicitud","Origen","Destino","Prioridad","Estado","Responsable","FechaSolicitud","FechaCierre"];
+    const rows=(SOURCE.rows||[]).slice(4).map(r=>names.map(k=>r[k]??""));
+    const sheet=XLSX.utils.aoa_to_sheet([names,...rows]);
+    sheet["!cols"]=[{wch:39},{wch:22},{wch:22},{wch:16},{wch:17},{wch:20},{wch:24},{wch:24}];
+    XLSX.utils.book_append_sheet(wb,sheet,"02_PEGAR_28");
     XLSX.writeFile(wb,"Base_Traslados_Mente_Estrategica.xlsx");
-    announce("Excel generado con 32 registros.");
+    announce("Excel generado: una hoja y 28 registros.");
   }
   function copyText(t){
     if(navigator.clipboard&&window.isSecureContext)return navigator.clipboard.writeText(t).then(()=>announce("Prompt copiado al portapapeles.")).catch(()=>fallback());
@@ -203,7 +207,7 @@
     $("#searchInput").addEventListener("input",renderDashboard);
     $("#fileUpload").addEventListener("change",e=>importFile(e.target.files[0]));
     $("#saveHtml").addEventListener("click",saveStandalone);
-    $("#downloadExcel").addEventListener("click",downloadExcel);
+    $("#downloadExcel")?.addEventListener("click",downloadExcel);
 
     $("#promptCards").addEventListener("click",e=>{const b=e.target.closest(".copyPrompt");if(!b)return;const p=SOURCE.prompts.find(p=>String(p.number)===b.dataset.prompt);if(p)copyText(p.text);});
     displayPrompts();buildFilterControls();renderDashboard();go(location.hash.replace("#","")||"inicio");
