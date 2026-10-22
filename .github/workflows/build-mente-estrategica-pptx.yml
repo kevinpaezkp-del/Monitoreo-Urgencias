@@ -1,0 +1,35 @@
+name: Generar PowerPoint Mente Estrategica
+on:
+  push:
+    branches: [main]
+    paths:
+      - "mente-estrategica/generar-pptx.js"
+      - ".github/workflows/build-mente-estrategica-pptx.yml"
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Generar PowerPoint editable
+        run: |
+          npm install --no-save --no-audit --no-fund pptxgenjs@3.12.0
+          node mente-estrategica/generar-pptx.js
+      - name: Publicar PPTX
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add mente-estrategica/Laboratorios_Guiados_Mente_Estrategica.pptx
+          if ! git diff --cached --quiet; then
+            git commit -m "docs: publicar PowerPoint original en recursos"
+            git push
+          fi
