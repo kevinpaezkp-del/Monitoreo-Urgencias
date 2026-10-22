@@ -34,7 +34,7 @@
     return (b-a)/3600000;
   }
   function announce(msg,error=false){const t=$("#toast");t.textContent=msg;t.style.background=error?"#a52346":"#132852";t.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove("show"),3400);}
-  function go(tab){if(!document.getElementById(tab))tab="inicio";$all(".page").forEach(x=>x.classList.toggle("active",x.id===tab));$all(".tab").forEach(x=>x.classList.toggle("active",x.dataset.tab===tab));if(location.hash!=="#"+tab)history.replaceState(null,"","#"+tab);window.scrollTo({top:0,behavior:"auto"});}
+  function go(tab){if(tab==="presentacion")tab="recursos";if(!document.getElementById(tab))tab="inicio";$all(".page").forEach(x=>x.classList.toggle("active",x.id===tab));$all(".tab").forEach(x=>x.classList.toggle("active",x.dataset.tab===tab));if(location.hash!=="#"+tab)history.replaceState(null,"","#"+tab);window.scrollTo({top:0,behavior:"auto"});}
   function renderSlide(){
     const d=SOURCE.slides[slideIndex];if(!d)return;
     $("#slideCategory").textContent=d.category||"LABORATORIO";
@@ -197,10 +197,6 @@
   document.addEventListener("DOMContentLoaded",()=>{
     $all(".tab").forEach(el=>el.addEventListener("click",()=>go(el.dataset.tab)));
     $all("[data-go]").forEach(el=>el.addEventListener("click",()=>go(el.dataset.go)));
-    $("#slidePrev").addEventListener("click",()=>{slideIndex=Math.max(0,slideIndex-1);renderSlide();});
-    $("#slideNext").addEventListener("click",()=>{slideIndex=Math.min(SOURCE.slides.length-1,slideIndex+1);renderSlide();});
-    $("#fullScreenBtn").addEventListener("click",()=>{const el=$("#slidePanel");if(document.fullscreenElement)document.exitFullscreen();else if(el.requestFullscreen)el.requestFullscreen().catch(()=>announce("Pantalla completa no disponible.",true));});
-    document.addEventListener("keydown",e=>{if(!$("#presentacion").classList.contains("active")||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;if(e.key==="ArrowRight"){slideIndex=Math.min(slideIndex+1,SOURCE.slides.length-1);renderSlide();}if(e.key==="ArrowLeft"){slideIndex=Math.max(0,slideIndex-1);renderSlide();}});
     $("#filterControls").addEventListener("change",e=>{if(!e.target.matches("input[type=checkbox]"))return;const {dim,val}=e.target.dataset;if(e.target.checked)filters[dim].add(val);else filters[dim].delete(val);renderDashboard();});
     $("#clearFilters").addEventListener("click",clear);
     ["dateFrom","dateTo"].forEach(id=>$("#"+id).addEventListener("change",renderDashboard));
@@ -208,8 +204,8 @@
     $("#fileUpload").addEventListener("change",e=>importFile(e.target.files[0]));
     $("#saveHtml").addEventListener("click",saveStandalone);
     $("#downloadExcel").addEventListener("click",downloadExcel);
-    $("#download28").addEventListener("click",()=>{download(asCSV(SOURCE.rows.slice(4)),"Traslados_28_para_SharePoint.csv","text/csv;charset=utf-8");announce("Descargados 28 registros.");});
+
     $("#promptCards").addEventListener("click",e=>{const b=e.target.closest(".copyPrompt");if(!b)return;const p=SOURCE.prompts.find(p=>String(p.number)===b.dataset.prompt);if(p)copyText(p.text);});
-    renderSlide();displayPrompts();buildFilterControls();renderDashboard();go(location.hash.replace("#","")||"inicio");
+    displayPrompts();buildFilterControls();renderDashboard();go(location.hash.replace("#","")||"inicio");
   });
 })();
